@@ -30,8 +30,8 @@ Proyecto basado en algoritmos Biometricos para la detección de rostros y su ver
 >**Nota**: Esta versión de Microsoft Oxford Project puede cambiar con el tiempo.
 - No olvidar agregar el permiso de acceso a internet al archivo  **Manifest.xml**:  `<uses-permission android:name="android.permission.INTERNET"/>`
 
-## Codificar un ejemplo
-### Aplicacion en Visual Studio
+## Codificación
+### Aplicación en Visual Studio
 #### Librerías necesarias
 ```c#
 using Microsoft.ProjectOxford.Face;
@@ -43,13 +43,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 ```
-#### Conexion con el servidor de Microsoft
+#### Conexión con el servidor de Microsoft
 ```c#
 FaceServiceClient faceServiceClient = new FaceServiceClient("e3275864a134451abf93c69eb5e372de", "https://westcentralus.api.cognitive.microsoft.com/face/v1.0");
 ```
-> **Nota**: El código "e3275864a134451abf93c69eb5e372de" en el primer parámetro se refiere a la clave de subscriptor, esta tiene una validez de 7 días a partir de 16/05/2018.
-> El segundo parámetro se refiere a la localización mas cercana para la API.
-#### Creacion de grupo de personas
+> **Nota**: 
+> - El código "e3275864a134451abf93c69eb5e372de" en el primer parámetro se refiere a la clave de subscriptor, esta tiene una validez de 7 días a partir de 16/05/2018.
+> - El segundo parámetro se refiere a la localización mas cercana para la API.
+#### Creación de grupo de personas
 ```c#
 public async void CreatePersonGroup(string personGroupId, string personGroupName)
         {
@@ -184,4 +185,279 @@ new Program().RecognitionFace("<Identificador de grupo>", @"C:\Users\<User>\Desk
 ##### Ejemplo:
 ```c#
 new Program().RecognitionFace("hollywoodstar", @"C:\Users\Gerald PC\Desktop\training\gerald.jpg");
+```
+## Aplicación en Android
+### Librerías a importar
+```java
+import  android.app.ProgressDialog;  
+import android.content.Intent;  
+import android.graphics.Bitmap;  
+import android.graphics.BitmapFactory;  
+import android.net.Uri;  
+import android.os.AsyncTask;  
+import android.os.Bundle;  
+import android.provider.MediaStore;  
+import android.support.v7.app.AppCompatActivity;  
+import android.view.View;  
+import android.widget.Button;  
+import android.widget.ImageView;  
+import android.widget.Toast;  
+  
+import com.microsoft.projectoxford.face.FaceServiceClient;  
+import com.microsoft.projectoxford.face.FaceServiceRestClient;  
+import com.microsoft.projectoxford.face.contract.Face;  
+import com.microsoft.projectoxford.face.contract.IdentifyResult;  
+import com.microsoft.projectoxford.face.contract.Person;  
+import com.microsoft.projectoxford.face.contract.TrainingStatus;  
+  
+import java.io.ByteArrayInputStream;  
+import java.io.ByteArrayOutputStream;  
+import java.io.IOException;  
+import java.io.InputStream;  
+import java.util.UUID;
+```
+### Variables a utilizar
+```java
+private FaceServiceClient mFaceServiceClient = new FaceServiceRestClient("https://westcentralus.api.cognitive.microsoft.com/face/v1.0", "e3275864a134451abf93c69eb5e372de");  
+private final String mPersonGroupId = "hollywoodstar";  
+  
+private final int PICK_IMAGE = 1;  
+  
+public ImageView mImageView;  
+public Bitmap mBitmap;  
+public Face[] mFacesDetected;
+```
+> **Nota**: 
+> - El código "e3275864a134451abf93c69eb5e372de" en el segundo parámetro se refiere a la clave de subscriptor, esta tiene una validez de 7 días a partir de 16/05/2018.
+> - El primer parámetro se refiere a la localización mas cercana para la API.
+
+### onCreate
+```java
+@Override  
+protected void onCreate(Bundle savedInstanceState) {  
+    super.onCreate(savedInstanceState);  
+  setContentView(R.layout.activity_main);  
+  
+ this.mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.face);  
+ this.mImageView = (ImageView) findViewById(R.id.imageView);  
+ this.mImageView.setImageBitmap(this.mBitmap);  
+  Button btnDetect = (Button) findViewById(R.id.btnDetectFace);  
+  Button btnIdentify = (Button) findViewById(R.id.btnIdentify);  
+  btnIdentify.setVisibility(View.GONE);  
+  
+  btnDetect.setOnClickListener(new View.OnClickListener() {  
+        @Override  
+  public void onClick(View v) {  
+            Intent gallIntent = new Intent(Intent.ACTION_GET_CONTENT);  
+  gallIntent.setType("image/*");  
+  startActivityForResult(Intent.createChooser(gallIntent, "Seleccionar foto"), PICK_IMAGE);  
+  }  
+    });  
+  btnIdentify.setOnClickListener(new View.OnClickListener() {  
+        @Override  
+  public void onClick(View v) {  
+            final UUID[] faceIds = new UUID[mFacesDetected.length];  
+ for (int i = 0; i < mFacesDetected.length; i++) {  
+                faceIds[i] = mFacesDetected[i].faceId;  
+  }  
+            new IdentificationTask(mPersonGroupId).execute(faceIds);  
+  }  
+    });  
+}
+```
+### onActivityResult
+```java
+@Override  
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {  
+    super.onActivityResult(requestCode, resultCode, data);  
+  
+ if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null && data.getData() != null) {  
+        Uri uri = data.getData();  
+ try {  
+            //Se obtiene la imagen como mapa de bits  
+  mBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);  
+  ImageView imageView = (ImageView) findViewById(R.id.imageView);  
+  imageView.setImageBitmap(mBitmap);  
+  
+  //Convertir imagen a stream  
+  ByteArrayOutputStream outputStream = new ByteArrayOutputStream();  
+  mBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);  
+  ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());  
+  
+  Button btnIdentify = (Button) findViewById(R.id.btnIdentify);  
+  btnIdentify.setVisibility(View.VISIBLE);  
+  
+  // Detectar y agregar.  
+  new detectTask().execute(inputStream);  
+  
+  } catch (IOException e) {  
+            e.printStackTrace();  
+  }  
+    }  
+}
+```
+### Clase detectTask
+```java
+class detectTask extends AsyncTask<InputStream, String, Face[]> {  
+    private ProgressDialog mDialog = new ProgressDialog(MainActivity.this);  
+  
+  @Override  
+  protected Face[] doInBackground(InputStream... params) {  
+        try {  
+            publishProgress("Detectando rostro...");  
+  Face[] results = mFaceServiceClient.detect(params[0], true, false, null);  
+ if (results == null) {  
+                publishProgress("Detección finalizada. No hay ningun rostro en la imagen");  
+ return null;  } else {  
+                publishProgress(String.format("Detección finalizada. %d face(s) detectada", results.length));  
+ return results;  
+  }  
+        } catch (Exception ex) {  
+            return null;  
+  }  
+    }  
+  
+    @Override  
+  protected void onPreExecute() {  
+        mDialog.show();  
+  }  
+  
+    @Override  
+  protected void onPostExecute(Face[] faces) {  
+        mDialog.dismiss();  
+  mFacesDetected = faces;  
+  }  
+  
+    @Override  
+  protected void onProgressUpdate(String... values) {  
+        mDialog.setMessage(values[0]);  
+  }  
+}
+```
+### Clase IdentificationTask
+```java
+private class IdentificationTask extends AsyncTask<UUID, String, IdentifyResult[]> {  
+    String personGroupId;  
+ private ProgressDialog mDialog = new ProgressDialog(MainActivity.this);  
+  
+ public IdentificationTask(String personGroupId) {  
+        this.personGroupId = personGroupId;  
+  }  
+  
+    @Override  
+  protected IdentifyResult[] doInBackground(UUID... params) {  
+        try {  
+            publishProgress("Obteniendo status del grupo de personas...");  
+  TrainingStatus trainingStatus = mFaceServiceClient.getPersonGroupTrainingStatus(this.personGroupId);  
+ if (trainingStatus.status != TrainingStatus.Status.Succeeded) {  
+                publishProgress("El estado de entrenamiento del grupo de personas es: " + trainingStatus.status);  
+ return null;  }  
+            publishProgress("Identificando...");  
+  
+  IdentifyResult[] results = mFaceServiceClient.identity(personGroupId, // person group id  
+  params // face ids  
+  , 1); // maximo numero de cantidatos que se requiere retorne  
+  
+  return results;  
+  
+  } catch (Exception e) {  
+            return null;  
+  }  
+    }  
+  
+    @Override  
+  protected void onPreExecute() {  
+        mDialog.show();  
+  }  
+  
+    @Override  
+  protected void onPostExecute(IdentifyResult[] identifyResults) {  
+        mDialog.dismiss();  
+ for (IdentifyResult identifyResult : identifyResults) {  
+            new PersonDetectionTask(personGroupId).execute(identifyResult.candidates.get(0).personId);  
+  }  
+    }  
+  
+    @Override  
+  protected void onProgressUpdate(String... values) {  
+        mDialog.setMessage(values[0]);  
+  }  
+}
+```
+### Clase PersonDetectionTask
+```java
+private class PersonDetectionTask extends AsyncTask<UUID, String, Person> {  
+    private ProgressDialog mDialog = new ProgressDialog(MainActivity.this);  
+ private String personGroupId;  
+  
+ public PersonDetectionTask(String personGroupId) {  
+        this.personGroupId = personGroupId;  
+  }  
+  
+    @Override  
+  protected Person doInBackground(UUID... params) {  
+        try {  
+            publishProgress("Obteniendo status del grupo de personas...");  
+  
+ return mFaceServiceClient.getPerson(personGroupId, params[0]);  
+  } catch (Exception e) {  
+            return null;  
+  }  
+    }  
+  
+    @Override  
+  protected void onPreExecute() {  
+        mDialog.show();  
+  }  
+  
+    @Override  
+  protected void onPostExecute(Person person) {  
+        mDialog.dismiss();  
+  
+  Toast.makeText(getApplicationContext(), person.name, Toast.LENGTH_SHORT).show();  
+  }  
+  
+    @Override  
+  protected void onProgressUpdate(String... values) {  
+        mDialog.setMessage(values[0]);  
+  }  
+}
+```
+### Activity a utilizar
+```xml
+<LinearLayout  
+  android:layout_width="match_parent"  
+  android:layout_height="match_parent"  
+  android:orientation="vertical">  
+  
+ <LinearLayout  android:id="@+id/groupButton"  
+  android:layout_width="match_parent"  
+  android:layout_height="wrap_content"  
+  android:layout_alignParentBottom="true"  
+  android:background="@color/colorPrimaryDark"  
+  android:weightSum="2">  
+  
+ <Button  android:id="@+id/btnDetectFace"  
+  android:layout_width="0dp"  
+  android:layout_height="wrap_content"  
+  android:layout_weight="1"  
+  android:background="@android:color/holo_blue_dark"  
+  android:text="Cargar rostro"  
+  android:textColor="@android:color/background_light" />  
+  
+ <Button  android:id="@+id/btnIdentify"  
+  android:layout_width="0dp"  
+  android:layout_height="wrap_content"  
+  android:layout_weight="1"  
+  android:background="@android:color/holo_green_dark"  
+  android:text="Identificar rostro"  
+  android:textColor="@android:color/background_light" />  
+  
+ </LinearLayout>  
+ <ImageView  android:id="@+id/imageView"  
+  android:layout_width="match_parent"  
+  android:layout_height="match_parent"  
+  android:background="@color/colorPrimaryDark" />  
+  
+</LinearLayout>
 ```
