@@ -147,15 +147,41 @@ public async void RecognitionFace(string personGroupId, string imgPath)
 ```c#
 new Program().CreatePersonGroup("<Identificador de grupo>","Nombre de grupo");
 ```
+>**Nota**:  
+>- Se especifica un identificador que sea sencillo de recordar, este servirá para hacer las llamadas desde este mismo programa o inclusive para que el grupo pueda ser identificado desde Android. 
+>- El nombre es simplemente representativo para este ejemplo.
+##### Ejemplo:
+```c#
+new Program().CreatePersonGroup("hollywoodstar","Hollywood Star");
+```
 #### Llamada a adherir persona al grupo
 ```c#
 new Program().AddPersonToGroup("<Nombre de grupo>", "<Nombre de persona>", @"C:\Users\<User>\Desktop\<Carpeta donde se encuentra>\.");
+```
+>**Nota**: 
+>- Se especifica el directorio donde se encuentran las imágenes que corresponden a una persona. Este directorio puede contener varias imágenes e inclusive una, pero no puede estar vació. Esto favorece a que el sistema pueda entrenar de una mejor manera.
+##### Ejemplo:
+```c#
+new Program().AddPersonToGroup("hollywoodstar", "Eminem", @"C:\Users\Gerald PC\Desktop\training\eminem\");
 ```
 #### Llamada a entrenar el sistema
 ```c#
 new Program().TrainingAI("<Identificador de grupo>");
 ```
+>**Nota**: 
+>- A este método solo se le pasa el identificador del grupo, se ejecuta una vez se hayan agregado las personas al grupo, inclusive siempre que se quiera agregar una nueva se puede volver a llamar.
+##### Ejemplo:
+```c#
+new Program().TrainingAI("hollywoodstar");
+```
 #### Llamada a reconocimiento de rostro
 ```c#
 new Program().RecognitionFace("<Identificador de grupo>", @"C:\Users\<User>\Desktop\<Carpeta donde se encuentra>\<imagen>.jpg");
+```
+>**Nota**: 
+>- Este llama a un método para realizar pruebas, el cual se encarga de tomar la imagen, detectar el rostro y luego realizar la comparación en el grupo de persona para determinar con cual de todas obtiene un mejor parentezco. 
+> - Como todo sistema biometrico, este esta expuesto a errores de determinación, en esto influye la calidad de la foto, la luz y otros factores que dificultan que se de un match preciso.
+##### Ejemplo:
+```c#
+new Program().RecognitionFace("hollywoodstar", @"C:\Users\Gerald PC\Desktop\training\gerald.jpg");
 ```
